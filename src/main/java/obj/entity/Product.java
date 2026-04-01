@@ -7,6 +7,7 @@
  */
 package obj.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /*
@@ -21,11 +22,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @lombok.Getter
 @lombok.Builder
 @lombok.NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Product {
     @JsonProperty("product_id")
     private String productID;
-
-    @JsonProperty("product_name")
     private String productName;
     private String unit;
     private double unitPrice;

@@ -28,7 +28,7 @@ public class MainObj01 {
         String dbName = "khang23646131";
         String userName = "neo4j";
         String pw = "0932897705";
-        String url = "neo4j://localhost:7687";
+        String url = "bolt://localhost:7687";
 
         ConnectDB connectDB = new ConnectDB(url,userName,pw,dbName);
         Mapper mapper = new Mapper();
