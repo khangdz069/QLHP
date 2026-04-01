@@ -1,31 +1,77 @@
-/*
- * @ (#) DAO.java       1.0     4/1/2026
- *
- * Copyright (c) 2026 .
- * IUH.
- * All rights reserved.
- */
-package dao;
+public class Mapper {
+    ObjectMapper mapper;
 
-import db.ConnectDB;
-import map.Mapper;
-import obj.entity.Product;
-import obj.entity.Supplier;
-import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.types.Node;
+    public Mapper() {
+        this.mapper = new ObjectMapper();
+    }
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+    public Map<String, Object> toMap(Object object){
+        return mapper.convertValue(object, Map.class);
+    }
 
-/*
- * @description:
- * @outhor: Khang
- * @date:   4/1/2026
- *version:  1.0
- */
+    public <T> T toObject (Map<String, Object> map, Class<T> clazz){
+        return mapper.convertValue(map,clazz);
+    }
+}
+
+public class ConnectDB {
+    Driver driver;
+    String dbName;
+
+    public ConnectDB(String url, String userName, String pw, String dbName) {
+        this.driver = GraphDatabase.driver(url, AuthTokens.basic(userName,pw));
+        this.dbName = dbName;
+    }
+
+    public Session getSession(){
+        return driver.session(SessionConfig.forDatabase(dbName));
+    }
+
+    public void close(){
+        driver.close();
+    }
+}
+
+public class MainObj01 {
+    public static void main(String[] args) {
+        System.out.println("Đang kết nối đến Neo4j...");
+        String dbName = "khang23646131";
+        String userName = "neo4j";
+        String pw = "0932897705";
+        String url = "neo4j://localhost:7687";
+
+        ConnectDB connectDB = new ConnectDB(url,userName,pw,dbName);
+        Mapper mapper = new Mapper();
+
+        DAO dao = new DAO(mapper,connectDB);
+        BUS bus = new BUS(dao,mapper);
+
+        System.out.println("C1:");
+        List<Product> products = dao.listProductsBySupplier("Specialty Biscuits Ltd.",1,1);
+        System.out.println(products.size());
+        for (Product product: products){
+            System.out.println(product.toString());
+        }
+
+        System.out.println("C2:");
+        boolean supplier = dao.updateSupplier(new Supplier("S005","Khang","Lake","VN"));
+        System.out.println(supplier);
+
+        System.out.println("C3:");
+        double tongTien = bus.calculateTotalOrder("O006");
+        System.out.println(tongTien);
+
+    }
+}
+
+
+
+
+
+
+
+
+
 public class DAO {
     ConnectDB connectDB;
     Mapper mapper;
@@ -107,9 +153,9 @@ public class DAO {
     //nếu hóa đơn tồn tại thì tìm
     public double calculateTotalOrder(String orderID) {
         String cypher = """
-            MATCH (p:Product) 
-            MATCH (o:Order{order_id:$id}) 
-            MATCH (o) - [r:ORDERS] -> (p) 
+            MATCH (p:Product)
+            MATCH (o:Order{order_id:$id})
+            MATCH (o) - [r:ORDERS] -> (p)
             RETURN SUM (r.quantity * r.unit_price - (r.quantity * r.unit_price * r.discount)) as total;
             """;
         Map<String, Object> params = Map.of("id", orderID);
@@ -122,5 +168,40 @@ public class DAO {
                 return total.asDouble();
             });
         }
+    }
+}
+
+
+public class BUS {
+    DAO dao;
+    Mapper mapper;
+
+    public BUS(DAO dao, Mapper mapper) {
+        this.dao = dao;
+        this.mapper = mapper;
+    }
+
+    public List<Product> listProductsBySupplier(String companyName, int page, int size) {
+        if(companyName.isBlank() || companyName.isEmpty()){
+            throw new IllegalArgumentException("Khong duoc rong");
+        }
+        if (page<=0) {
+            throw new IllegalArgumentException("page phai so duong");
+        }
+        if (size<=0) {
+            throw new IllegalArgumentException("size phai so duong");
+        }
+        return dao.listProductsBySupplier(companyName,page,size);
+    }
+
+
+    //tìm theo mã hóa đơn
+
+    //nếu hóa đơn tồn tại thì tìm
+    public double calculateTotalOrder(String orderID) {
+        if(!dao.kiemTraHoaDon(orderID)){
+            return 0.0;
+        }
+        return dao.calculateTotalOrder(orderID);
     }
 }
